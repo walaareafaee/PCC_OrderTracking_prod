@@ -1,0 +1,586 @@
+openapi: 3.0.1
+info:
+  title: Parts.cat.com – Order Tracking v3
+  description: Order tracking services in PCC including tracking of delivery, pickup, and dropbox orders.
+  version: 0.3.0
+  x-cat-confidential-level-oas: 'Caterpillar: Confidential Green'
+  x-cat-api-metadata:
+    cat-app-troux-id: '9009'
+    cat-api-sharable: 'Yes'
+    cat-api-internet-facing: 'Yes'
+    cat-api-has-web-contents: 'No'
+    cat-api-base-url: https://api.cat.com/eCommerce/orderTracking/v3
+    cat-api-auth-type: 'oauth_2'
+    cat-api-is-production: 'No'
+servers:
+  - url: https://api.cat.com/eCommerce/orderTracking/v3
+security:
+  - catFedLogin: []
+  - b2clogin: []
+tags:
+  - name: Order Tracking Information
+    description: This API creates an order tracking record in PCC for the given order and items.
+paths:
+  /tracking:
+    post:
+      x-cat-confidential-level-data: 'Caterpillar: Confidential Green'
+      tags:
+        - Order Tracking Information
+      summary: Create order tracking record
+      description: Creates order tracking record in PCC.
+      operationId: createOrderTrackingRecord
+      parameters:
+        - $ref: '#/components/parameters/storeId'
+        - $ref: '#/components/parameters/language'
+        - $ref: '#/components/parameters/X-Cat-API-Tracking-Id'
+        - $ref: '#/components/parameters/X-Cat-QA-Env'
+      requestBody:
+        description: Request body for creating order tracking information.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderTrackingServiceRequest'
+            examples:
+              Delivery:
+                description: Request payload with fulfillment method of "delivery".
+                value:
+                  dealerCode: TD00
+                  documentNumber: 00C12345
+                  documentStatus: DL
+                  fulfillment:
+                    type: delivery
+                    status: FS
+                    parts:
+                      - partNumber: 1R-1808
+                        quantity: 6
+                        status: PS
+                      - partNumber: 1R-1808
+                        quantity: 4
+                        status: FS
+                    shipmentInformation:
+                      carrier: Fedex
+                      shipmentDate: '2021-04-30'
+                      shipmentMethod: FEDEX GROUND
+                      trackingId: '777755551234'
+                      trackingUrl: https://www.fedex.com/apps/fedextrack/?trkmbr=777755551234
+                    customFields:
+                      field1: Test data
+                      field2: Test data
+              Pickup/Dropbox:
+                description: Request payload with fulfillment method of "pickup".
+                value:
+                  dealerCode: TD00
+                  documentNumber: 00C112685
+                  documentStatus: PU
+                  fulfillment:
+                    type: pickup
+                    status: ''
+                    parts:
+                      - partNumber: 1R-1801
+                        quantity: 6
+                        status: ''
+                      - partNumber: 1R-1808
+                        quantity: 4
+                        status: ''
+                      - partNumber: 1A-1135
+                        quantity: 10
+                        status: ''
+                    customFields:
+                      field1: Test data
+                      field2: Test data
+        required: true
+      responses:
+        204:
+          description: No Content
+          headers:
+            X-Cat-API-Tracking-Id:
+              $ref: '#/components/headers/X-Cat-API-Tracking-Id'
+        400:
+         $ref: '#/components/responses/400OrderTrackingBadRequest'
+        401:
+         $ref: '#/components/responses/401Unauthorized'
+        404:
+         $ref: '#/components/responses/404NotFound'
+        413:
+         $ref: '#/components/responses/413PayloadTooLarge'
+        415:
+         $ref: '#/components/responses/415UnsupportedMediaType'
+        429:
+         $ref: '#/components/responses/429TooManyRequests'
+        500:
+         $ref: '#/components/responses/500InternalServerError'
+        503:
+          $ref: '#/components/responses/503ServiceUnavailable'
+components:
+  headers:
+    X-Cat-API-Tracking-Id:
+      description: A unique ID generated for each request.
+      required: false
+      schema:
+        type: string
+        format: uuid
+      example: 33aa372a-a4e4-11ea-bb37-0242ac130002
+    X-Cat-QA-Env:
+      description: 'Determines which PCC QA environment to route the request to. Available values: qa1parts, qa2parts, qa3parts'
+      required: false
+      schema:
+        $ref: '#/components/schemas/QaEnvironment'
+  parameters:
+    language:
+      description: Language used for messages in the API response.
+      in: query
+      name: locale
+      required: false
+      schema:
+        type: string
+        enum:
+          - en_US
+          - fr_FR
+          - de_DE
+          - it_IT
+          - es_ES
+          - pt_BR
+          - zh_CN
+          - zh_TW
+          - ko_KR
+          - ja_JP
+          - tr_TR
+          - ru_RU
+          - ro_RO
+          - pl_PL
+          - ar_EG
+          - es_MX
+          - in_ID
+          - cs_CZ
+          - nl_NL
+          - nb_NO
+          - sv_SE
+    storeId:
+      name: storeId
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/StoreId'
+      description: The store identifier.
+    X-Cat-API-Tracking-Id:
+      name: X-Cat-API-Tracking-Id
+      in: header
+      description: A unique ID generated for each request.
+      required: false
+      schema:
+        $ref: '#/components/schemas/ApiTrackingId'
+    X-Cat-QA-Env:
+      name: X-Cat-QA-Env
+      in: header
+      description: 'Determines which PCC QA environment to route the request to. Available values: qa1parts, qa2parts, qa3parts'
+      required: false
+      schema:
+        $ref: '#/components/schemas/QaEnvironment'
+  responses:
+    400OrderTrackingBadRequest:
+      description: Bad Request
+      headers:
+        X-Cat-API-Tracking-Id:
+          $ref: '#/components/headers/X-Cat-API-Tracking-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorWrapper'
+          examples:
+            DealerCodedError:
+              description: Some of the inputs provided to the request aren't valid.
+              value:
+                errors:
+                  - errorMessage: Incomplete or invalid parameters were specified for dealer code.
+                    errorParameters:
+                      - dealerCode
+                    errorCode: null
+                    errorKey: _ERR_INVALID_DEALER_CODE
+            DocumentNumberError:
+              description: Some of the inputs provided to the request aren't valid.
+              value:
+                errors:
+                  - errorMessage: Incomplete or invalid parameters were specified for document number.
+                    errorParameters:
+                      - documentNumber
+                    errorCode: null
+                    errorKey: MISSING_DOCUMENT_NUMBER
+            PartNumberError:
+              description: Some of the inputs provided to the request aren't valid.
+              value:
+                errors:
+                  - errorMessage: Incomplete or invalid parameters were specified for part number.
+                    errorParameters:
+                      - partNumber
+                    errorCode: null
+                    errorKey: _ERR_INVALID_PART_NUMBER
+            ErrorAlternative:
+              description: Example of the common error format.
+              value:
+                code: '400.001'
+                description: Unknown error occurred
+    401Unauthorized:
+      description: Unauthorized
+      headers:
+        X-Cat-API-Tracking-Id:
+          $ref: '#/components/headers/X-Cat-API-Tracking-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorWrapper'
+          examples:
+            Errors:
+              description: Example for unauthorized error.
+              value:
+                errors:
+                  - errorKey: AUTHORIZATION_FAILED
+                    errorParameters: ''
+                    errorMessage: Authorization Bearer token is invalid or expired
+                    errorCode: AUTHORIZATION_FAILED
+            ErrorAlternative:
+              description: Example of the common error format.
+              value:
+                code: '401.001'
+                description: Invalid Access Token
+    404NotFound:
+      description: Not Found
+      headers:
+        X-Cat-API-Tracking-Id:
+          $ref: '#/components/headers/X-Cat-API-Tracking-Id'
+      content:
+        application/json:
+          example:
+            code: '404.001'
+            description: Resource not found
+          schema:
+            $ref: '#/components/schemas/ErrorAlternative'
+    413PayloadTooLarge:
+      description: Payload Too Large
+      headers:
+        X-Cat-API-Tracking-Id:
+          $ref: '#/components/headers/X-Cat-API-Tracking-Id'
+      content:
+        application/json:
+          example:
+            code: '413.001'
+            description: Request Entity Too Large
+          schema:
+            $ref: '#/components/schemas/ErrorAlternative'
+    415UnsupportedMediaType:
+      description: Unsupported Media Type
+      headers:
+        X-Cat-API-Tracking-Id:
+          $ref: '#/components/headers/X-Cat-API-Tracking-Id'
+      content:
+        application/json:
+          example:
+            code: '415.001'
+            description: |
+              Unsupported Media Type. Requested payload format is not supported by this
+              method on the target resource. The format problem might be due to the
+              request's indicated Content-Type or Content-Encoding, or as a result of
+              inspecting the data directly.
+          schema:
+            $ref: '#/components/schemas/ErrorAlternative'
+    429TooManyRequests:
+      description: Too Many Requests
+      headers:
+        X-Cat-API-Tracking-Id:
+          $ref: '#/components/headers/X-Cat-API-Tracking-Id'
+      content:
+        application/json:
+          example:
+            code: '429.001'
+            description: Throttling rate limit exceeded
+          schema:
+            $ref: '#/components/schemas/ErrorAlternative'
+    500InternalServerError:
+      description: Internal Server Error
+      headers:
+        X-Cat-API-Tracking-Id:
+          $ref: '#/components/headers/X-Cat-API-Tracking-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorWrapper'
+          examples:
+            Errors:
+              description: example of HCL Commerce standard error
+              value:
+                errors:
+                  - errorMessage: 'CWXFR0230E: Internal server error. Details will be stored within the server logs.'
+                    errorCode: CWXFR0230E
+                    errorKey: ERR_INTERNAL_SERVER_ERROR
+                    errorLevel: SEVERE
+            ErrorAlternative:
+              description: Example of the common error format.
+              value:
+                code: '500.001'
+                description: Uncaught server error
+    503ServiceUnavailable:
+      description: Service Unavailable
+      headers:
+        X-Cat-API-Tracking-Id:
+          $ref: '#/components/headers/X-Cat-API-Tracking-Id'
+      content:
+        application/json:
+          example:
+            code: '503.001'
+            description: Service Unavailable
+          schema:
+            $ref: '#/components/schemas/ErrorAlternative'
+  schemas:
+    ErrorWrapper:
+      description: Errors will be one of the following schemas.
+      oneOf:
+        - $ref: '#/components/schemas/Errors'
+        - $ref: '#/components/schemas/ErrorAlternative'
+    Errors:
+      description: The format of the error response contains an array of errors.
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+    Error:
+      description: The format of each error from the server.
+      type: object
+      required:
+        - errorMessage
+        - errorCode
+        - errorKey
+      properties:
+        errorMessage:
+          description: A message describing the error.
+          type: string
+          example: Incomplete or invalid parameters were specified.
+        errorParameters:
+          description: Array of parameters that were missing from request and generated error.
+          type: array
+          items:
+            type: string
+          example: [documentStatus]
+        errorCode:
+          description: Alphanumeric code for error.
+          type: string
+          example: '400'
+          nullable: true
+        errorKey:
+          description: Unique key to identify an error.
+          type: string
+          example: _ERR_CMD_BAD_PARAMETER
+        errorLevel:
+          description: Error severity level.
+          type: string
+          example: SEVERE
+    ErrorAlternative:
+      type: object
+      required:
+        - code
+        - description
+      description: |
+        Every HTTP status code returns different `code` value in the response based on the nature of error occurred.
+        One HTTP status code can return different `code` for different use cases.
+      properties:
+        code:
+          type: string
+          description: Error Code represents a alpha-numeric error code received from the error.
+          example: '400.001'
+        description:
+          type: string
+          description: Message represents a textual description of a given error code.
+          example: Unknown error occurred
+    ApiTrackingId:
+      type: string
+      description: A unique ID generated for each request or response.
+      format: uuid
+      example: 33aa372a-a4e4-11ea-bb37-0242ac130002
+    QaEnvironment:
+      type: string
+      description: 'Determines which PCC QA environment to route the request to. Available values: qa1parts, qa2parts, qa3parts.'
+      enum:
+        - qa1parts
+        - qa2parts
+        - qa3parts
+    StoreId:
+      type: integer
+      description: Dealer store (eSite) identifier. StoreId is 5 characters long.
+      example: 20195
+    OrderTrackingServiceRequest:
+      description: Order tracking information.
+      type: object
+      properties:
+        dealerCode:
+          description: The dealership's dealer code making the request.
+          type: string
+          example: TD00
+        documentNumber:
+          description: Order number in dealers business system.
+          type: string
+          example: 00C12345
+        documentStatus:
+          description: |
+            Order tracking status at the order (document) level. This status is used on order tracking page in parts.cat.com.
+            
+            | Status Code | Status Description | 
+            | --- | --- | 
+            | DL | Delivered |
+            | PS | Partially Shipped |
+            | FS | Fully Shipped | 
+            | PU | Picked Up | 
+            | RP | Ready for Pickup | 
+            | PA | Ready for Partial Pick Up | 
+            | OH | On Hold | 
+            | OR | Order Released | 
+            | OC | Order Cancelled | 
+            | EX | Exception | 
+          type: string
+          example: FS
+          enum:
+            - DL
+            - PS
+            - FS
+            - PU
+            - RP
+            - OH
+            - OR
+            - OC
+            - EX
+            - PA
+        fulfillment:
+          $ref: '#/components/schemas/Fulfillment'
+    Fulfillment:
+      description: Fulfillment Information in the order tracking request payload.
+      type: object
+      properties:
+        type:
+          description: Type of fulfillment.
+          type: string
+          enum:
+            - delivery
+            - pickup
+            - dropbox
+        status:
+          $ref: '#/components/schemas/Status'
+        parts:
+          description: List of parts.
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/PartsList'
+          example:
+            - partNumber: 1R-1808
+              quantity: 6
+              status: PS
+            - partNumber: 1R-1808
+              quantity: 4
+              status: FS
+        shipmentInformation:
+          $ref: '#/components/schemas/ShipmentInformation'
+        customFields:
+          $ref: '#/components/schemas/CustomFields'
+      required:
+        - type
+    PartsList:
+      description: List of parts.
+      type: object
+      properties:
+        partNumber:
+          description: Part Number for which order tracking details are sent.
+          type: string
+          example: 1R-1808
+        quantity:
+          description: Quantity of the part number.
+          type: integer
+          example: 1
+        status:
+          $ref: '#/components/schemas/Status'
+    ShipmentInformation:
+      description: Shipment related information.
+      type: object
+      properties:
+        carrier:
+          description: Carrier name.
+          type: string
+          example: Fedex
+        shipmentDate:
+          description: Shipment Date in yyyy-mm-dd format. For more information about the date format, see https://tools.ietf.org/html/rfc3339.
+          type: string
+          format: date
+          pattern: ^\d{4}-\d\d-\d\d$
+          example: '2021-04-30'
+        shipmentMethod:
+          description: Shipment method details.
+          type: string
+          example: FEDEX GROUND
+        trackingId:
+          description: Tracking ID.
+          type: string
+          example: '777755551234'
+          maxLength: 254
+        trackingUrl:
+          description: Tracking URL of Shipment.
+          type: string
+          format: uri
+          example: https://www.fedex.com/apps/fedextrack/?trkmbr=777755551234
+    CustomFields:
+      description: Custom fields provided by dealer.
+      type: object
+      maxProperties: 100
+      additionalProperties:
+        type: string
+      example:
+        field1: Test data
+        field2: Test data
+    Status:
+      description: |
+        Order tracking status at more granular level than the entire order fulfillment. Status can be applied at the fulfillment or part level. This status will be used in the future on parts.cat.com.
+      
+        | Status Code | Status Description | 
+        | --- | --- | 
+        | DL | Delivered |
+        | PS | Partially Shipped |
+        | FS | Fully Shipped | 
+        | PU | Picked Up | 
+        | RP | Ready for Pickup | 
+        | PA | Ready for Partial Pick Up | 
+        | OH | On Hold | 
+        | OR | Order Released | 
+        | OC | Order Cancelled | 
+        | EX | Exception | 
+      type: string
+      example: FS
+      enum:
+        - DL
+        - PS
+        - FS
+        - PU
+        - RP
+        - OH
+        - OR
+        - OC
+        - EX
+        - PA
+  securitySchemes:
+    catFedLogin:
+      type: oauth2
+      description: Authentication using Cat FedLogin and the OAuth 2.0 framework.
+      flows:
+        clientCredentials:
+          tokenUrl: https://fedlogin.cat.com/as/token.oauth2?pfidpadapterid=OAuthAdapterCCDS
+          scopes: {}
+    b2clogin:
+      type: oauth2
+      description: Authentication using Azure B2C and the OAuth 2.0 framework.
+      flows:
+        implicit:
+          authorizationUrl: https://cwslogin.b2clogin.com/cwslogin.onmicrosoft.com/oauth2/v2.0/authorize?p=B2C_1A_P1_V1_SIGNIN_PROD
+          scopes:
+            scope: https://cwslogin.onmicrosoft.com/data-access-api/Customers.Update
+        authorizationCode:
+          authorizationUrl: https://cwslogin.b2clogin.com/cwslogin.onmicrosoft.com/oauth2/v2.0/authorize?p=B2C_1A_P1_V1_SIGNIN_PROD
+          tokenUrl: https://cwslogin.b2clogin.com/cwslogin.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1A_P1_V1_SIGNIN_PROD
+          scopes:
+            scope: https://cwslogin.onmicrosoft.com/data-access-api/Customers.Update
